@@ -130,6 +130,12 @@ int main(int argc, char** argv){
 	            		close(file_input);
 			            execvp(cmd[0], cmd);
 	            		break;
+
+	            	// Esses dois nao estao funcionando corretamente quando temos mais de um operador.
+	            	// Por exemplo, ./shell-1 echo ABC ">" output.txt e ./shell-1 echo ABC ">>" output.txt funcionam.
+	            	// Mas ./shell-1 sort "<" input.txt "|" grep .c ">" output.txt  ou ./shell-1 ls -la "|" grep .c ">" output.txt  NAO funcionam.
+	            	// Isso deve ser refatorado.
+	            		
         			case OPERATOR_OUTPUT_OVERWRITE:
 	            		file_name = argv[operator_pos + 1];
         				close(fd[0]);
