@@ -91,13 +91,16 @@ int main(int argc, char** argv){
 		int fd[2], command_pos = 1, operator_pos;
 		int aux = STDIN_FILENO;
 		int num_op = count_operators(argv);
+		int status = -1; // Nao executado ainda.
+
+		int operator = -1;
 
 		for(int i = 0; i < num_op+1; i++){
 			operator_pos = get_operator_position(command_pos, argv);
 			cmd = &argv[command_pos];
 
 			if (operator_pos != -1) {
-				char* operator = argv[operator_pos];
+				operator = get_operator_type(operator_pos, argv);
 				cmd[operator_pos - command_pos] = NULL;
 			}
 			
@@ -120,10 +123,23 @@ int main(int argc, char** argv){
 	        }
 	        else if (p_id > 0){ 
 				// printf("Pai: Processo (%d) - Comando (%s) %s\n", getpid(), cmd[0], cmd[1]);
-	            aux = fd[0];
-	            close(fd[1]);
-	            waitpid(p_id, NULL, 0);
-	        }else{
+
+				switch(operator){
+	            	case OPERATOR_BACKGROUND:
+	            		aux = fd[0];
+			            close(fd[1]);
+			            waitpid(p_id, &status, WNOHANG);
+            		case OPERATOR_PIPE:
+            			aux = fd[0];
+			            close(fd[1]);
+			            waitpid(p_id, &status, 0);
+	            		break;
+            		default:
+            			break;
+	            }
+
+	            
+    			}else{
 	            perror("fork()");
 	            return -1;
 	        }
