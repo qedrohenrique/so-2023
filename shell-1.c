@@ -1,8 +1,11 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/wait.h>
-#include <strings.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define OPERATOR_OR 0
 #define OPERATOR_AND 1
@@ -54,8 +57,8 @@ int get_operator_type(int pos, char** argv){
 	if(argv[pos][0] == '|') return OPERATOR_PIPE;
 	if(argv[pos][0] == '&') return OPERATOR_BACKGROUND;
 	if(argv[pos][0] == '<') return OPERATOR_INPUT;
-	if(argv[pos][0] == '>') return OPERATOR_OUTPUT_OVERWRITE;
 	if(argv[pos][0] == '>' && argv[pos][1] == '>') return OPERATOR_OUTPUT_APPEND;
+	if(argv[pos][0] == '>') return OPERATOR_OUTPUT_OVERWRITE;
 	return -1;
 }
 
@@ -114,16 +117,48 @@ int main(int argc, char** argv){
 			pid_t p_id = fork();
 			
 			if (p_id == 0){    
-				// printf("Filho: Processo (%d) - Comando (%s) %s\n", getpid(), cmd[0], cmd[1]);
-	            close(fd[0]);            
-	            dup2(aux, STDIN_FILENO); 
-	            if (i < num_op) dup2(fd[1], STDOUT_FILENO); 
-	            execvp(cmd[0], cmd);
+				printf("Filho: Processo (%d) - Operator (%d) - Comando (%s) %s\n", getpid(), operator, cmd[0], cmd[1]);
+				char* file_name;
+				int file_input, file_output;
+
+	            switch(operator){
+	            	case OPERATOR_INPUT:
+	            		file_name = argv[operator_pos + 1];
+	            		close(fd[0]);
+	            		file_input = open(file_name, O_RDONLY, 0644);
+	            		dup2(file_input,STDIN_FILENO);
+	            		close(file_input);
+			            execvp(cmd[0], cmd);
+	            		break;
+        			case OPERATOR_OUTPUT_OVERWRITE:
+	            		file_name = argv[operator_pos + 1];
+        				close(fd[0]);
+	            		file_output = open(file_name, O_CREAT | O_RDWR | O_TRUNC, 0644);
+	            		dup2(file_output,STDOUT_FILENO);
+	            		close(file_output);
+			            execvp(cmd[0], cmd);
+	            		break;
+            		case OPERATOR_OUTPUT_APPEND:
+	            		file_name = argv[operator_pos + 1];
+        				close(fd[0]);
+	            		file_output = open(file_name, O_CREAT | O_RDWR | O_APPEND, 0644);
+	            		dup2(file_output,STDOUT_FILENO);
+	            		close(file_output);
+			            execvp(cmd[0], cmd);
+	            		break;
+	            	case OPERATOR_PIPE:
+	            		close(fd[0]);            
+			            dup2(aux, STDIN_FILENO); 
+			            if (i < num_op) dup2(fd[1], STDOUT_FILENO); 
+			            execvp(cmd[0], cmd);
+	            		break;
+	            	default:
+	            		break;
+	            }
 	            return 0;
 	        }
 	        else if (p_id > 0){ 
-				// printf("Pai: Processo (%d) - Comando (%s) %s\n", getpid(), cmd[0], cmd[1]);
-
+				//printf("Pai: Processo (%d) - Operator(%d) - Comando (%s) %s\n", getpid(), operator, cmd[0], cmd[1]);
 				switch(operator){
 	            	case OPERATOR_BACKGROUND:
 	            		aux = fd[0];
@@ -135,11 +170,13 @@ int main(int argc, char** argv){
 			            waitpid(p_id, &status, 0);
 	            		break;
             		default:
-            			break;
+            			aux = fd[0];
+			            close(fd[1]);
+			            waitpid(p_id, &status, 0);
+	            		break;
 	            }
 
-	            
-    			}else{
+	        }else{
 	            perror("fork()");
 	            return -1;
 	        }
