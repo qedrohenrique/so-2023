@@ -34,13 +34,13 @@ int get_operator_position(int pos, char** argv){
 
 /*
 	Retorna o numero de operadores na matriz de argumentos.
+
+	OBS: Nao inclui "<", ">" e ">>".
 */
 int count_operators(char **argv){
     int i = 0, count = 0;
     while (argv[i]){
         if (argv[i][0] == '|' || // Isso inclui o operador "||" 
-			argv[i][0] == '<' || 
-			argv[i][0] == '>' || // Isso inclui o operador ">>"
 			argv[i][0] == '&'	 // Isso inclui o operador "&&"
 			) count++;
         i++;
@@ -105,9 +105,11 @@ int main(int argc, char** argv){
 			if (operator_pos != -1) {
 				operator = get_operator_type(operator_pos, argv);
 				cmd[operator_pos - command_pos] = NULL;
+			}else{
+				operator = -1;
 			}
 			
-			//printf("%s - %d com %d numero de argumentos.\n", argv[command_pos], command_pos, operator_pos-command_pos-1);
+			// printf("%s - %d com %d numero de argumentos.\n", argv[command_pos], command_pos, operator_pos-command_pos-1);
 
 			if (pipe(fd) < 0){
 	            perror("pipe()");
@@ -117,7 +119,7 @@ int main(int argc, char** argv){
 			pid_t p_id = fork();
 			
 			if (p_id == 0){    
-				printf("Filho: Processo (%d) - Operator (%d) - Comando (%s) %s\n", getpid(), operator, cmd[0], cmd[1]);
+				// printf("Filho: Processo (%d) - Operator (%d) - Comando (%s) %s\n", getpid(), operator, cmd[0], cmd[1]);
 				char* file_name;
 				int file_input, file_output;
 
@@ -127,27 +129,24 @@ int main(int argc, char** argv){
 	            		close(fd[0]);
 	            		file_input = open(file_name, O_RDONLY, 0644);
 	            		dup2(file_input,STDIN_FILENO);
+	            		if (i < num_op) dup2(fd[1], STDOUT_FILENO);
 	            		close(file_input);
 			            execvp(cmd[0], cmd);
 	            		break;
-
-	            	// Esses dois nao estao funcionando corretamente quando temos mais de um operador.
-	            	// Por exemplo, ./shell-1 echo ABC ">" output.txt e ./shell-1 echo ABC ">>" output.txt funcionam.
-	            	// Mas ./shell-1 sort "<" input.txt "|" grep .c ">" output.txt  ou ./shell-1 ls -la "|" grep .c ">" output.txt  NAO funcionam.
-	            	// Isso deve ser refatorado.
-	            		
         			case OPERATOR_OUTPUT_OVERWRITE:
 	            		file_name = argv[operator_pos + 1];
-        				close(fd[0]);
 	            		file_output = open(file_name, O_CREAT | O_RDWR | O_TRUNC, 0644);
+	            		close(fd[0]);
+			            dup2(aux, STDIN_FILENO); 
 	            		dup2(file_output,STDOUT_FILENO);
 	            		close(file_output);
 			            execvp(cmd[0], cmd);
 	            		break;
             		case OPERATOR_OUTPUT_APPEND:
 	            		file_name = argv[operator_pos + 1];
-        				close(fd[0]);
 	            		file_output = open(file_name, O_CREAT | O_RDWR | O_APPEND, 0644);
+	            		close(fd[0]);
+			            dup2(aux, STDIN_FILENO); 
 	            		dup2(file_output,STDOUT_FILENO);
 	            		close(file_output);
 			            execvp(cmd[0], cmd);
@@ -159,6 +158,10 @@ int main(int argc, char** argv){
 			            execvp(cmd[0], cmd);
 	            		break;
 	            	default:
+	            		close(fd[0]);            
+			            dup2(aux, STDIN_FILENO); 
+			            if (i < num_op) dup2(fd[1], STDOUT_FILENO); 
+			            execvp(cmd[0], cmd);
 	            		break;
 	            }
 	            return 0;
@@ -177,7 +180,7 @@ int main(int argc, char** argv){
 	            		break;
             		default:
             			aux = fd[0];
-			            close(fd[1]);
+            			close(fd[1]);
 			            waitpid(p_id, &status, 0);
 	            		break;
 	            }
@@ -187,7 +190,11 @@ int main(int argc, char** argv){
 	            return -1;
 	        }
 
-	        command_pos = operator_pos + 1;
+	        if(operator == OPERATOR_INPUT){
+	        	command_pos = operator_pos + 3;
+	        }else{
+	        	command_pos = operator_pos + 1;
+	        }
 	    }
 	}	
 
