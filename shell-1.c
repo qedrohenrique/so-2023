@@ -131,8 +131,24 @@ int main(int argc, char** argv){
 	            		dup2(file_input,STDIN_FILENO);
 	            		if (i < num_op) dup2(fd[1], STDOUT_FILENO);
 	            		close(file_input);
-			            execvp(cmd[0], cmd);
-	            		break;
+
+	            		if(operator_pos + 2 < argc - 1){
+	            			if (argv[operator_pos + 2][0] == '>' && argv[operator_pos + 2][1] == '>'){
+								file_name = argv[operator_pos + 3];
+			            		file_output = open(file_name, O_CREAT | O_RDWR | O_APPEND, 0644);
+			            		dup2(file_output,STDOUT_FILENO);
+			            		close(file_output); 		
+				            }else if (argv[operator_pos + 2][0] == '>'){
+		            			file_name = argv[operator_pos + 3];
+			            		file_output = open(file_name, O_CREAT | O_RDWR | O_TRUNC, 0644);
+			            		dup2(file_output,STDOUT_FILENO);
+			            		close(file_output);
+		            		}
+	            		}
+
+	            		execvp(cmd[0], cmd);
+            			break;
+		        
         			case OPERATOR_OUTPUT_OVERWRITE:
 	            		file_name = argv[operator_pos + 1];
 	            		file_output = open(file_name, O_CREAT | O_RDWR | O_TRUNC, 0644);
@@ -140,7 +156,17 @@ int main(int argc, char** argv){
 			            dup2(aux, STDIN_FILENO); 
 	            		dup2(file_output,STDOUT_FILENO);
 	            		close(file_output);
-			            execvp(cmd[0], cmd);
+
+						if(operator_pos + 2 < argc - 1){
+							if(argv[operator_pos + 2][0] == '<'){
+		            			file_name = argv[operator_pos + 3];
+			            		file_input = open(file_name, O_RDONLY, 0644);
+			            		dup2(file_input,STDIN_FILENO);
+			            		close(file_input);
+							}
+	            		}
+
+	            		execvp(cmd[0], cmd);
 	            		break;
             		case OPERATOR_OUTPUT_APPEND:
 	            		file_name = argv[operator_pos + 1];
@@ -149,7 +175,18 @@ int main(int argc, char** argv){
 			            dup2(aux, STDIN_FILENO); 
 	            		dup2(file_output,STDOUT_FILENO);
 	            		close(file_output);
-			            execvp(cmd[0], cmd);
+
+	            		if(operator_pos + 2 < argc - 1){
+            				if(argv[operator_pos + 2][0] == '<'){
+	            			file_name = argv[operator_pos + 3];
+		            		file_input = open(file_name, O_RDONLY, 0644);
+		            		dup2(file_input,STDIN_FILENO);
+		            		close(file_input);
+	            			}
+	            		}
+	            		
+
+	            		execvp(cmd[0], cmd);
 	            		break;
 	            	case OPERATOR_PIPE:
 	            		close(fd[0]);            
