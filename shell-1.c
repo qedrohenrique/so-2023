@@ -94,9 +94,9 @@ int main(int argc, char** argv){
 		int fd[2], command_pos = 1, operator_pos;
 		int aux = STDIN_FILENO;
 		int num_op = count_operators(argv);
-		int status = -1; // Nao executado ainda.
+		int status = -1, child_status = -1; // Nao executado ainda.
 
-		int operator = -1;
+		int operator = -1, last_operator = -1;
 
 		for(int i = 0; i < num_op+1; i++){
 			operator_pos = get_operator_position(command_pos, argv);
@@ -108,6 +108,18 @@ int main(int argc, char** argv){
 			}else{
 				operator = -1;
 			}
+
+	        if(child_status != -1){
+	        	if((child_status == 0 && last_operator == OPERATOR_OR) || (child_status != 0 && last_operator == OPERATOR_AND)){
+		        	if(operator == OPERATOR_INPUT || operator == OPERATOR_OUTPUT_APPEND || operator == OPERATOR_OUTPUT_OVERWRITE){
+			        	command_pos = operator_pos + 3;
+			        }else{
+			        	command_pos = operator_pos + 1;
+		        	}
+		        	child_status = -1;
+		        	continue;	
+		        }
+	        }
 			
 			// printf("%s - %d com %d numero de argumentos.\n", argv[command_pos], command_pos, operator_pos-command_pos-1);
 
@@ -194,6 +206,12 @@ int main(int argc, char** argv){
 			            if (i < num_op) dup2(fd[1], STDOUT_FILENO); 
 			            execvp(cmd[0], cmd);
 	            		break;
+            		case OPERATOR_OR:
+            			execvp(cmd[0], cmd);
+	            		break;
+            		case OPERATOR_AND:
+            			execvp(cmd[0], cmd);
+	            		break;
 	            	default:
 	            		close(fd[0]);            
 			            dup2(aux, STDIN_FILENO); 
@@ -204,7 +222,7 @@ int main(int argc, char** argv){
 	            return 0;
 	        }
 	        else if (p_id > 0){ 
-				//printf("Pai: Processo (%d) - Operator(%d) - Comando (%s) %s\n", getpid(), operator, cmd[0], cmd[1]);
+				// printf("Pai: Processo (%d) - Operator(%d) - Comando (%s) %s\n", getpid(), operator, cmd[0], cmd[1]);
 				switch(operator){
 	            	case OPERATOR_BACKGROUND:
 	            		aux = fd[0];
@@ -214,6 +232,16 @@ int main(int argc, char** argv){
             			aux = fd[0];
 			            close(fd[1]);
 			            waitpid(p_id, &status, 0);
+	            		break;
+            		case OPERATOR_OR:
+			            waitpid(p_id, &status, 0);
+			            child_status = WEXITSTATUS(status);
+			            last_operator = OPERATOR_OR;
+	            		break;
+            		case OPERATOR_AND:
+			            waitpid(p_id, &status, 0);
+			            child_status = WEXITSTATUS(status);
+			            last_operator = OPERATOR_AND;
 	            		break;
             		default:
             			aux = fd[0];
@@ -227,7 +255,7 @@ int main(int argc, char** argv){
 	            return -1;
 	        }
 
-	        if(operator == OPERATOR_INPUT){
+	        if(operator == OPERATOR_INPUT || operator == OPERATOR_OUTPUT_APPEND || operator == OPERATOR_OUTPUT_OVERWRITE){
 	        	command_pos = operator_pos + 3;
 	        }else{
 	        	command_pos = operator_pos + 1;
