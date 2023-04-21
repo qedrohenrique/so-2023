@@ -1,3 +1,9 @@
+
+//
+//	Versão utilizando Loteria.
+//
+
+
 /* This file contains essentially all of the process and message handling.
  * Together with "mpx.s" it forms the lowest layer of the MINIX kernel.
  * There is one entry point from the outside:
@@ -33,6 +39,7 @@
 #include <signal.h>
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "vm.h"
 #include "clock.h"
@@ -1638,6 +1645,7 @@ void enqueue(
 			  (priv(p)->s_flags & PREEMPTIBLE))
 		  RTS_SET(p, RTS_PREEMPTED); /* calls dequeue() */
   }
+
 #ifdef CONFIG_SMP
   /*
    * if the process was enqueued on a different cpu and the cpu is idle, i.e.
@@ -1779,6 +1787,15 @@ void dequeue(struct proc *rp)
 #endif
 }
 
+// RANDOM NUMBER
+
+#define MAX_RANDOM 0x7fffffff
+static u_long new_rand = 1;
+
+int pick_random_int(void){
+	return (int)((new_rand = new_rand * 1103515245 + 1337420) % ((u_long)MAX_RANDOM + 1));
+}
+
 /*===========================================================================*
  *				pick_proc				     * 
  *===========================================================================*/
@@ -1790,6 +1807,7 @@ static struct proc * pick_proc(void)
  *
  * This function always uses the run queues of the local cpu!
  */
+
   register struct proc *rp;			/* process to run */
   struct proc **rdy_head;
   int q;				/* iterate over queues */
@@ -1800,6 +1818,11 @@ static struct proc * pick_proc(void)
    */
   rdy_head = get_cpulocal_var(run_q_head);
   for (q=0; q < NR_SCHED_QUEUES; q++) {	
+  	//processos em de usuario
+  	if(q == 7){
+  		q += 8;
+  	}
+
 	if(!(rp = rdy_head[q])) {
 		TRACE(VF_PICKPROC, printf("cpu %d queue %d empty\n", cpuid, q););
 		continue;
@@ -1809,6 +1832,45 @@ static struct proc * pick_proc(void)
 		get_cpulocal_var(bill_ptr) = rp; /* bill for system time */
 	return rp;
   }
+
+  // Algoritmo de loteria
+
+  int p_ready[7] = {0}, tickets_in_q[7] = { 0 };
+  int tickets = 0, picked_ticket = 0, acc_sum = 0;
+  int min_t_q = 7;
+
+  for (int i = 0; i <= NR_TASKS + NR_PROCS; i++){
+  	register struct proc * process = proc[i];
+  	if(process->p_priority <= 14 && process->p_priority >= 7){
+  		const int priority_queue = process->p_priority;
+  		if(proc_is_runnable(process)) p_ready[7-priority_queue]++;
+  	}
+  }
+
+  for(q = 7; q < 15; q++){
+  	int t = p_ready[7-q] * (16-q);
+  	tickets_in_q[7-q] = t;
+  	tickets += t;
+  }
+
+  picked_ticket = pick_random_int() % tickets + 1;
+
+  for(q = 7; q < 15; q++){
+  	int t = tickets_in_q[7-q];
+  	acc_sum += t;
+  	if(picked_ticket <= acc_sum){
+  		min_t_q = q;
+  		break;
+  	}
+  }
+
+  if((rp = rdy_head[min_t_q] && proc_is_runnable(rp)){
+  	if(priv(rp)->s_flags & BILLABLE){
+  		get_cpulocal_var(bill_ptr) = rp;
+  	}
+  	return rp;
+  }
+
   return NULL;
 }
 
