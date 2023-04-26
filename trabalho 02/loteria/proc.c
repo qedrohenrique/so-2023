@@ -1840,7 +1840,7 @@ static struct proc * pick_proc(void)
   int min_t_q = 7;
 
   for (int i = 0; i <= NR_TASKS + NR_PROCS; i++){
-  	register struct proc * process = proc[i];
+  	register struct proc * process = &proc[i];
   	if(process->p_priority <= 14 && process->p_priority >= 7){
   		const int priority_queue = process->p_priority;
   		if(proc_is_runnable(process)) p_ready[7-priority_queue]++;
@@ -1864,7 +1864,7 @@ static struct proc * pick_proc(void)
   	}
   }
 
-  if((rp = rdy_head[min_t_q] && proc_is_runnable(rp)){
+  if((rp = rdy_head[min_t_q]) && proc_is_runnable(rp)){
   	if(priv(rp)->s_flags & BILLABLE){
   		get_cpulocal_var(bill_ptr) = rp;
   	}
