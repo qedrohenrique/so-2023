@@ -11,8 +11,7 @@
 
 /*
 		TODO:
-	O bit de modificado esta sendo setado corretamente?
-	Adicionar media e dp aos numeros sorteados.
+	Bit mod sendo setado corretamente?
 */
 
 void fill_memory(List* mem, int mem_size, int page_id, int start){
