@@ -12,6 +12,7 @@
 /*
 		TODO:
 	Bit mod sendo setado corretamente?
+	Quando restar os bits ref e mod?
 */
 
 void fill_memory(List* mem, int mem_size, int page_id, int start){
@@ -225,12 +226,13 @@ int main(int argc, char** argv){
 				Page pag_real = list_search_page(MR, pag_virutal);
 
 				if(pag_real == NULL){
-					pag_real = trap_nur(MR, MS, pag_virutal);
+					pag_real = trap_nur(MV, MS, pag_virutal);
 					page_miss++;
 				}
 
 				list_ref_page(MR, pag_real->id);
 				if(i%10==0)list_mod_page(MR, pag_real->id);
+				if(i%100==0)list_reset_ref_mod_bits(MS);
 		}
 
 		printf("Page miss: %d\n", page_miss);
