@@ -38,8 +38,10 @@ void reset_mod_bit(Page page){
 }
 
 Page get_random_page_id(int seed_i, int seed_exp, int std_dev, int mean){
+	int lower = mean - std_dev;
+	int upper = mean + std_dev;
 	srand(seed_i + seed_exp);
-	return (rand() % (2*std_dev)) + 1 + mean; // Soma-se 1, pois a menor memoria possivel eh 1.
+	return (rand() % (upper - lower + 1)) + lower;
 }
 
 void print_page(Page page){

@@ -59,17 +59,6 @@ int list_remove_head(List *list) {
     return 1;
 }
 
-void list_print(List *list) {
-    Page curr = list->head;
-
-    while(curr != NULL) {
-        printf("%d -> ", curr->id);
-        curr = curr->next;
-    }
-
-    printf("null\n");
-}
-
 int list_has_item(List *list, int id) {
     Page curr = list->head;
 
@@ -110,4 +99,20 @@ void list_reset_ref_mod_bits(List *list){
         curr->mod = 0;
         curr = curr->next;
     }
+}
+
+void list_print(List *list) {
+    Page curr = list->head;
+
+    while(curr != NULL) {
+        printf("%d -> ", curr->id);
+        curr = curr->next;
+    }
+
+    printf("null\n");
+}
+
+void list_find_and_print(List *list, int id){
+    Page p = list_search_page(list, id);
+    print_page(p);
 }
