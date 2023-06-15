@@ -21,12 +21,12 @@ Page trap_fifo(List *mr, List* ms, int id){
 	Page aux_page = create_page(-1);
 	Page mr_page = mr->head;
 
-	copy_page(mr_page, aux_page);
+ 	copy_page(ms_page, aux_page);
+	copy_page(mr_page, ms_page);
 	list_remove_head(mr);
-	list_insert(mr, ms_page);
-	copy_page(aux_page, ms_page);
+	list_insert(mr, aux_page);
 
-	return mr_page;
+	return aux_page;
 }
 
 Page trap_second_chance(List *mr, List* ms, int id){
@@ -52,12 +52,12 @@ Page trap_second_chance(List *mr, List* ms, int id){
 	}
 
 	mr_page = mr->head;
-	copy_page(mr_page, aux_page);
+	copy_page(ms_page, aux_page);
+	copy_page(mr_page, ms_page);
 	list_remove_head(mr);
-	list_insert(mr, ms_page);
-	copy_page(aux_page, ms_page);
+	list_insert(mr, aux_page);
 
-	return mr_page;
+	return aux_page;
 }
 
 Page trap_nur(List *mr, List* ms, int id){
@@ -195,9 +195,9 @@ int main(int argc, char** argv){
 				int pag_virutal = get_random_page_id(i, exp_num, std_dev, mean);
 				
 				Page pag_real = list_search_page(MR, pag_virutal);
-
+				
 				if(pag_real == NULL){
-					pag_real = trap_nur(MR, MS, pag_virutal);
+					pag_real = trap_fifo(MR, MS, pag_virutal);
 					page_miss++;
 				}
 
