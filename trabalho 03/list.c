@@ -102,12 +102,11 @@ void list_mod_page(List *list, int id){
     page->mod = 1;
 }
 
-void list_reset_ref_mod_bits(List *list){
+void list_reset_ref_bits(List *list){
     Page curr = list->head;
 
     while(curr != NULL){
         curr->ref = 0;
-        curr->mod = 0;
         curr = curr->next;
     }
 }

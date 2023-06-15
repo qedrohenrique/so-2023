@@ -8,13 +8,6 @@
 #define MR_SIZE 64
 #define MS_SIZE 64
 
-
-/*
-		TODO:
-	Bit mod sendo setado corretamente?
-	Quando restar os bits ref e mod?
-*/
-
 void fill_memory(List* mem, int mem_size, int page_id, int start){
 	page_id = page_id + start;
     for(int i = start; i < mem_size + start; i++) {
@@ -28,17 +21,10 @@ Page trap_fifo(List *mr, List* ms, int id){
 	Page aux_page = create_page(-1);
 	Page mr_page = mr->head;
 
-	// printf("--- ANTES DO TRAP ---\n\n");
-	// print_page(mr_page);
-	// printf("\n");
-
 	copy_page(mr_page, aux_page);
-	copy_page(ms_page, mr_page);
+	list_remove_head(mr);
+	list_insert(mr, ms_page);
 	copy_page(aux_page, ms_page);
-
-	// printf("--- DEPOIS DO TRAP ---\n\n");
-	// print_page(mr_page);
-	// printf("\n");
 
 	return mr_page;
 }
@@ -55,36 +41,21 @@ Page trap_second_chance(List *mr, List* ms, int id){
 			list_insert(mr, create_page(mr_page->id)); // ao fazer isso, resetamos mr_page->ref e mr_page->mod para 0.
 			list_remove_head(mr);
 		}else{
-			// printf("--- ANTES DO TRAP ---\n\n");
-			// print_page(mr_page);
-			// printf("\n");
+			
 			copy_page(mr_page, aux_page);
 			copy_page(ms_page, mr_page);
 			copy_page(aux_page, ms_page);
-
-			// printf("--- DEPOIS DO TRAP ---\n\n");
-			// print_page(mr_page);
-			// printf("\n");
 
 			return mr_page;
 		}
 		mr_page = mr_page->next;
 	}
 
-
-	// printf("--- ANTES DO TRAP ---\n\n");
-	// print_page(mr_page);
-	// printf("\n");
-
 	mr_page = mr->head;
-
 	copy_page(mr_page, aux_page);
-	copy_page(ms_page, mr_page);
+	list_remove_head(mr);
+	list_insert(mr, ms_page);
 	copy_page(aux_page, ms_page);
-
-	// printf("--- DEPOIS DO TRAP ---\n\n");
-	// print_page(mr_page);
-	// printf("\n");
 
 	return mr_page;
 }
@@ -226,13 +197,13 @@ int main(int argc, char** argv){
 				Page pag_real = list_search_page(MR, pag_virutal);
 
 				if(pag_real == NULL){
-					pag_real = trap_nur(MV, MS, pag_virutal);
+					pag_real = trap_nur(MR, MS, pag_virutal);
 					page_miss++;
 				}
 
 				list_ref_page(MR, pag_real->id);
 				if(i%10==0)list_mod_page(MR, pag_real->id);
-				if(i%100==0)list_reset_ref_mod_bits(MS);
+				if(i%100==0)list_reset_ref_bits(MS);
 		}
 
 		printf("Page miss: %d\n", page_miss);
